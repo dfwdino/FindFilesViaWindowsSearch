@@ -65,10 +65,11 @@ foreach (string file in FileList.Take(50))
         SourceSizeOnDisk = SizeOnDisk.GetSizeOnDisk(Path.Combine(_fileProcessingConfig.SearchFolder, file));
 
         SourceSize = new FileInfo(Path.Combine(_fileProcessingConfig.SearchFolder, file)).Length;
+        bool HasMoved = false;
 
         foreach (var result in WinodwsSearchResults)
         {
-            bool HasMoved = false;
+
             result.SizeOnDisk = SizeOnDisk.GetSizeOnDisk(result.FullPath);
 
             //If the file has been moved and there are more then one file in the windows search. I still want to get the file size of the file in the next list just in case.
