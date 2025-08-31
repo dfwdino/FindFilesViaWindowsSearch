@@ -13,7 +13,7 @@ Console.WriteLine("Loading configuration...");
 FileProcessingConfigModel _fileProcessingConfig = new FileProcessingConfigModel(
     excludedExtensions: new[] { ".ini", ".exe", ".zip", ".pdf" },
     searchFolder: @"C:\Users\Shane\Desktop\Temp Photos\",
-    reportsFolder: @"C:\Temp\myList.json"
+    reportFullFile: @"C:\Temp\myList.json"
 );
 
 _fileProcessingConfig.MoveIfFound = true;
@@ -37,14 +37,12 @@ if (!FileList.Any())
 
 List<AllSearchResults> allSearchResults = new();
 
-int totalFiles = Math.Min(FileList.Count(), 5);
-int processedFiles = 0;
-Console.WriteLine($"\nProcessing {totalFiles} files...");
+Console.WriteLine($"\nProcessing {FileCounterModel.TotalFilesCount} files...");
 
-foreach (string file in FileList.Take(5))
+foreach (string file in FileList.Take(25))
 {
-    processedFiles++;
-    Console.WriteLine($"\n[{processedFiles}/{totalFiles}] Processing file: {file}");
+    FileCounterModel.ProcessedFilesCount++;
+    Console.WriteLine($"\n[{FileCounterModel.ProcessedFilesCount}/{FileCounterModel.TotalFilesCount}] Processing file: {file}");
     Console.Write("Searching for matching files... ");
     var WinodwsSearchResults = await _WindowsSearchService.SearchFilesAsync(file, "*");
     Console.WriteLine($"Found {WinodwsSearchResults.Count} potential matches");
@@ -63,7 +61,7 @@ foreach (string file in FileList.Take(5))
 
             result.SizeOnDisk = SizeOnDisk.GetSizeOnDisk(result.FullPath);
 
-            if (SourceSizeOnDisk == result.SizeOnDisk)
+            if (SourceSizeOnDisk == result.SizeOnDisk) //If Source and search Size On Disk bytes match.  Very likly its the same item. 
             {
                 result.IsSameSizeOnDisk = true;
                 string sourcePath = Path.Combine(_fileProcessingConfig.SearchFolder, file);
@@ -72,6 +70,8 @@ foreach (string file in FileList.Take(5))
                 Console.WriteLine($"  ✓ Match found! Moving to matched folder...");
                 try
                 {
+                    Console.WriteLine($"Found matching name and Size on Disk the same.  Assuming its the same file name. ");
+                    FileCounterModel.MatchedFilesCount++;
                     File.Move(sourcePath, destPath);
                     Console.WriteLine($" Moved to: {_fileProcessingConfig.MatchedFolder}\\{file}");
                 }
@@ -80,16 +80,22 @@ foreach (string file in FileList.Take(5))
                     Console.WriteLine($" Error moving file: {ex.Message}");
                 }
             }
-
-            if (_fileProcessingConfig.MoveIfFound)
+            else if (_fileProcessingConfig.MoveIfFound)//If the file name is found. It will get moved to the found folder but assume its the same file. 
             {
+                Console.WriteLine($"Found matching file {file} but can't assume its the same file. Moving to match found. ");
+                FileCounterModel.FoundFilesCount++;
                 File.Move(Path.Combine(_fileProcessingConfig.SearchFolder, file), Path.Combine(_fileProcessingConfig.SearchFolder, _fileProcessingConfig.FoundFolder, file));
+
             }
 
         }
-
     }
-
+    else
+    {
+        Console.WriteLine($"Could not find other {file} by that name. ");
+        FileCounterModel.NotFoundFilesCount++;
+        File.Move(Path.Combine(_fileProcessingConfig.SearchFolder, file), Path.Combine(_fileProcessingConfig.SearchFolder, _fileProcessingConfig.NotFoundFolder, file));
+    }
     allSearchResults.Add(new AllSearchResults { searchTerm = file, results = WinodwsSearchResults, Size = SourceSize, SizeOnDisk = SourceSizeOnDisk });
 }
 
@@ -103,7 +109,7 @@ File.WriteAllText(_fileProcessingConfig.ReportsFullFile, jsonString);
 
 // Summary
 Console.WriteLine("\n=== Processing Complete ===");
-Console.WriteLine($"Total files processed: {allSearchResults.Count}");
+Console.WriteLine($"Total files processed: {allSearchResults.Count}, found files {FileCounterModel.FoundFilesCount} and matched where {FileCounterModel.MatchedFilesCount}");
 Console.WriteLine($"Results saved to: {_fileProcessingConfig.ReportsFullFile}");
 Console.WriteLine("\nPress any key to exit...");
 Console.ReadKey();

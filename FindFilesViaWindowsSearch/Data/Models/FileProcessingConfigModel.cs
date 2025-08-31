@@ -48,7 +48,7 @@ namespace FindFilesViaWindowsSearch.Data.Models
         public FileProcessingConfigModel(
             IEnumerable<string> excludedExtensions,
             string searchFolder,
-            string reportsFolder,
+            string reportFullFile,
             string foundFolder = "FoundFiles",
             string matchedFolder = "MatchFiles",
             string notFoundFolder = "NotFoundFiles")
@@ -68,7 +68,7 @@ namespace FindFilesViaWindowsSearch.Data.Models
             FoundFolder = foundFolder;
             NotFoundFolder = notFoundFolder;
             MatchedFolder = matchedFolder;
-            ReportsFullFile = reportsFolder;
+            ReportsFullFile = reportFullFile;
         }
 
         private void CheckFolderAndCreate(string folderlocation)
@@ -84,10 +84,10 @@ namespace FindFilesViaWindowsSearch.Data.Models
         /// </summary>
         /// <param name="searchFolder">Root folder path for file searching</param>
         /// <returns>A new FileProcessingConfig instance with default settings</returns>
-        public static FileProcessingConfigModel CreateDefault(string searchFolder)
+        public static FileProcessingConfigModel CreateDefault(string searchFolder, string reportFullFile)
         {
             var defaultExclusions = new[] { ".ini", ".exe", ".zip" };
-            return new FileProcessingConfigModel(defaultExclusions, searchFolder);
+            return new FileProcessingConfigModel(defaultExclusions, searchFolder, reportFullFile);
         }
 
     }
