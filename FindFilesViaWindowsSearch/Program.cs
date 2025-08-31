@@ -49,7 +49,7 @@ List<AllSearchResults> allSearchResults = new();
 
 Console.WriteLine($"\nProcessing {FileCounterModel.TotalFilesCount} files...");
 
-foreach (string file in FileList.Take(20))
+foreach (string file in FileList.Take(50))
 {
     FileCounterModel.ProcessedFilesCount++;
     Console.WriteLine($"\n[{FileCounterModel.ProcessedFilesCount}/{FileCounterModel.TotalFilesCount}] Processing file: {file}");
@@ -68,8 +68,15 @@ foreach (string file in FileList.Take(20))
 
         foreach (var result in WinodwsSearchResults)
         {
-
+            bool HasMoved = false;
             result.SizeOnDisk = SizeOnDisk.GetSizeOnDisk(result.FullPath);
+
+            //If the file has been moved and there are more then one file in the windows search. I still want to get the file size of the file in the next list just in case.
+            //Therefore, i need to skip the rest of the process. 
+            if (HasMoved)
+            {
+                continue;
+            }
 
             if (SourceSizeOnDisk == result.SizeOnDisk) //If Source and search Size On Disk bytes match.  Very likly its the same item. 
             {
@@ -84,8 +91,8 @@ foreach (string file in FileList.Take(20))
                     FileCounterModel.MatchedFilesCount++;
                     File.Move(sourcePath, destPath);
                     Console.WriteLine($" Moved to: {_fileProcessingConfig.MatchedFolder}\\{file}");
-                    //If it finds more then one file in the windows search. it will break after the first move.  If not, it will error out on the move again.
-                    break;
+                    HasMoved = true;
+
                 }
                 catch (Exception ex)
                 {
@@ -98,8 +105,10 @@ foreach (string file in FileList.Take(20))
                 Console.WriteLine($"Found matching file {file} but can't assume its the same file. Moving to match found. ");
                 FileCounterModel.FoundFilesCount++;
                 File.Move(Path.Combine(_fileProcessingConfig.SearchFolder, file), Path.Combine(_fileProcessingConfig.SearchFolder, _fileProcessingConfig.FoundFolder, file));
-
+                HasMoved = true;
             }
+
+
 
         }
     }
