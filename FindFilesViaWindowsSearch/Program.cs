@@ -3,20 +3,24 @@
 
 using FindFilesViaWindowsSearch.Data.Models;
 using FindFilesViaWindowsSearch.Infrastructure.Services;
-using System.Runtime.InteropServices;
 using System.Text.Json;
 
 WindowsSearchService _WindowsSearchService = new WindowsSearchService();
 
-var excludedExtensions = new[] { ".ini", ".exe", ".zip" };
-string SearchFolder = @"C:\Users\Shane\Desktop\Temp Photos";
 
-var FileList = Directory.GetFiles(SearchFolder, "*", SearchOption.AllDirectories)
+//Really should be setting this in appsettings.json file.
+FileProcessingConfigModel _fileProcessingConfig = new FileProcessingConfigModel(
+    excludedExtensions: new[] { ".ini", ".exe", ".zip", ".pdf" },
+    searchFolder: @"C:\Users\Shane\Desktop\Temp Photos\"
+    );
+
+_fileProcessingConfig.MoveIfFound = true;
+
+
+
+var FileList = Directory.GetFiles(_fileProcessingConfig.SearchFolder, "*", SearchOption.AllDirectories)
                             .Select(Path.GetFileName)
-                            .Where(file => !excludedExtensions.Any(ext => file.EndsWith(ext, StringComparison.OrdinalIgnoreCase)));
-
-[DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-static extern bool GetCompressedFileSizeEx(string lpFileName, out long lpFileSize);
+                            .Where(file => !_fileProcessingConfig.ExcludedExtensions.Any(ext => file.EndsWith(ext, StringComparison.OrdinalIgnoreCase)));
 
 
 if (!FileList.Any())
@@ -27,35 +31,49 @@ if (!FileList.Any())
 
 List<AllSearchResults> allSearchResults = new();
 
-foreach (string file in FileList.Take(2))
+foreach (string file in FileList.Take(5))
 {
-    var results = await _WindowsSearchService.SearchFilesAsync(file, "*");
-    long size = 0;
-    long sourceSizeOnDisk = 0;
+    var WinodwsSearchResults = await _WindowsSearchService.SearchFilesAsync(file, "*");
+    long SourceSize = 0;
+    long SourceSizeOnDisk = 0;
 
-    if (results.Any())
+    if (WinodwsSearchResults.Any())
     {
-        if (GetCompressedFileSizeEx(Path.Combine(SearchFolder, file), out long sizeOnDisk))
+
+        SourceSizeOnDisk = SizeOnDisk.GetSizeOnDisk(Path.Combine(_fileProcessingConfig.SearchFolder, file));
+
+        SourceSize = new FileInfo(Path.Combine(_fileProcessingConfig.SearchFolder, file)).Length;
+
+        foreach (var result in WinodwsSearchResults)
         {
-            sourceSizeOnDisk = sizeOnDisk;
+
+            result.SizeOnDisk = SizeOnDisk.GetSizeOnDisk(result.FullPath);
+
+            if (SourceSizeOnDisk == result.SizeOnDisk)
+            {
+                result.IsSameSizeOnDisk = true;
+
+                File.Move(Path.Combine(_fileProcessingConfig.SearchFolder, file), Path.Combine(_fileProcessingConfig.SearchFolder, _fileProcessingConfig.MatchedFolder, file));
+            }
+
+            if (_fileProcessingConfig.MoveIfFound)
+            {
+                File.Move(Path.Combine(_fileProcessingConfig.SearchFolder, file), Path.Combine(_fileProcessingConfig.SearchFolder, _fileProcessingConfig.FoundFolder, file));
+            }
+
         }
 
-        size = new FileInfo(Path.Combine(SearchFolder, file)).Length;
     }
 
-    allSearchResults.Add(new AllSearchResults { searchTerm = file, results = results, Size = size, SizeOnDisk = sourceSizeOnDisk });
+    allSearchResults.Add(new AllSearchResults { searchTerm = file, results = WinodwsSearchResults, Size = SourceSize, SizeOnDisk = SourceSizeOnDisk });
 }
 
 
 string jsonString = JsonSerializer.Serialize(allSearchResults, new JsonSerializerOptions { WriteIndented = true });
 
-//File.Create(@"c:\tmep\myList.json");
-// Write JSON string to a file
 File.WriteAllText(@"c:\temp\myList.json", jsonString);
 
 Console.WriteLine("List exported to myList.json successfully!");
 
 Console.WriteLine(allSearchResults.Count);
-
-
 

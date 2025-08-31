@@ -8,6 +8,9 @@ namespace FindFilesViaWindowsSearch.Data.Models
         public long Size { get; init; } = 0;
 
         public long SizeOnDisk { get; set; } = 0;
+
+        public bool IsSameSizeOnDisk { get; set; } = false;
+
         public DateTime Modified { get; init; }
     }
 }
