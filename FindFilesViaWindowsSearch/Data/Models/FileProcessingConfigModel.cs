@@ -31,6 +31,8 @@ namespace FindFilesViaWindowsSearch.Data.Models
         /// </summary>
         public string NotFoundFolder { get; }
 
+        public string ReportsFullFile { get; }
+
         public bool MoveIfFound { get; set; } = false;
         public bool MoveIfNotFound { get; set; } = false;
 
@@ -46,6 +48,7 @@ namespace FindFilesViaWindowsSearch.Data.Models
         public FileProcessingConfigModel(
             IEnumerable<string> excludedExtensions,
             string searchFolder,
+            string reportsFolder,
             string foundFolder = "FoundFiles",
             string matchedFolder = "MatchFiles",
             string notFoundFolder = "NotFoundFiles")
@@ -65,6 +68,7 @@ namespace FindFilesViaWindowsSearch.Data.Models
             FoundFolder = foundFolder;
             NotFoundFolder = notFoundFolder;
             MatchedFolder = matchedFolder;
+            ReportsFullFile = reportsFolder;
         }
 
         private void CheckFolderAndCreate(string folderlocation)
