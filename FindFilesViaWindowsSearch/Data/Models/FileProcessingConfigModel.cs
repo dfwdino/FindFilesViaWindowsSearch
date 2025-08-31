@@ -1,4 +1,4 @@
-﻿using System.Collections.Frozen;
+using System.Collections.Frozen;
 
 namespace FindFilesViaWindowsSearch.Data.Models
 {
@@ -41,14 +41,16 @@ namespace FindFilesViaWindowsSearch.Data.Models
         /// </summary>
         /// <param name="excludedExtensions">File extensions to exclude from processing</param>
         /// <param name="searchFolder">Root folder path for file searching</param>
+        /// <param name="reportsFullFile">Full file path for reports</param>
         /// <param name="foundFolder">Folder name for successfully processed files</param>
+        /// <param name="matchedFolder">Folder name for matched files</param>
         /// <param name="notFoundFolder">Folder name for failed or missing files</param>
         /// <exception cref="ArgumentNullException">Thrown when any parameter is null</exception>
         /// <exception cref="ArgumentException">Thrown when string parameters are empty or whitespace</exception>
         public FileProcessingConfigModel(
             IEnumerable<string> excludedExtensions,
             string searchFolder,
-            string reportFullFile,
+            string reportsFullFile,
             string foundFolder = "FoundFiles",
             string matchedFolder = "MatchFiles",
             string notFoundFolder = "NotFoundFiles")
@@ -68,7 +70,7 @@ namespace FindFilesViaWindowsSearch.Data.Models
             FoundFolder = foundFolder;
             NotFoundFolder = notFoundFolder;
             MatchedFolder = matchedFolder;
-            ReportsFullFile = reportFullFile;
+            ReportsFullFile = reportsFullFile;
         }
 
         private void CheckFolderAndCreate(string folderlocation)
@@ -79,16 +81,6 @@ namespace FindFilesViaWindowsSearch.Data.Models
             }
         }
 
-        /// <summary>
-        /// Creates a default configuration instance with commonly excluded file extensions.
-        /// </summary>
-        /// <param name="searchFolder">Root folder path for file searching</param>
-        /// <returns>A new FileProcessingConfig instance with default settings</returns>
-        public static FileProcessingConfigModel CreateDefault(string searchFolder, string reportFullFile)
-        {
-            var defaultExclusions = new[] { ".ini", ".exe", ".zip" };
-            return new FileProcessingConfigModel(defaultExclusions, searchFolder, reportFullFile);
-        }
 
     }
 }

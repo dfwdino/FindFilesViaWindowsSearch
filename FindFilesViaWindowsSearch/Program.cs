@@ -1,22 +1,32 @@
 
 
 
+using FindFilesViaWindowsSearch.Configuration;
 using FindFilesViaWindowsSearch.Data.Models;
 using FindFilesViaWindowsSearch.Infrastructure.Services;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 
 Console.WriteLine("Initializing Windows Search Service...");
 WindowsSearchService _WindowsSearchService = new WindowsSearchService();
 
+//Need to move this or create a function for tha the main file processing.
 // Configuration
 Console.WriteLine("Loading configuration...");
-FileProcessingConfigModel _fileProcessingConfig = new FileProcessingConfigModel(
-    excludedExtensions: new[] { ".ini", ".exe", ".zip", ".pdf" },
-    searchFolder: @"C:\Users\Shane\Desktop\Temp Photos\",
-    reportFullFile: @"C:\Temp\myList.json"
-);
+var configuration = new ConfigurationBuilder()
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .Build();
 
-_fileProcessingConfig.MoveIfFound = true;
+var services = new ServiceCollection();
+services.AddFileProcessingConfig(configuration);
+var serviceProvider = services.BuildServiceProvider();
+
+// Get the configuration
+FileProcessingConfigModel _fileProcessingConfig = serviceProvider.GetRequiredService<FileProcessingConfigModel>();
+
+
 Console.WriteLine($"Searching in: {_fileProcessingConfig.SearchFolder}");
 Console.WriteLine($"Excluding files with extensions: {string.Join(", ", _fileProcessingConfig.ExcludedExtensions)}");
 
@@ -39,7 +49,7 @@ List<AllSearchResults> allSearchResults = new();
 
 Console.WriteLine($"\nProcessing {FileCounterModel.TotalFilesCount} files...");
 
-foreach (string file in FileList.Take(25))
+foreach (string file in FileList.Take(20))
 {
     FileCounterModel.ProcessedFilesCount++;
     Console.WriteLine($"\n[{FileCounterModel.ProcessedFilesCount}/{FileCounterModel.TotalFilesCount}] Processing file: {file}");
@@ -74,11 +84,14 @@ foreach (string file in FileList.Take(25))
                     FileCounterModel.MatchedFilesCount++;
                     File.Move(sourcePath, destPath);
                     Console.WriteLine($" Moved to: {_fileProcessingConfig.MatchedFolder}\\{file}");
+                    //If it finds more then one file in the windows search. it will break after the first move.  If not, it will error out on the move again.
+                    break;
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($" Error moving file: {ex.Message}");
                 }
+
             }
             else if (_fileProcessingConfig.MoveIfFound)//If the file name is found. It will get moved to the found folder but assume its the same file. 
             {
@@ -90,7 +103,7 @@ foreach (string file in FileList.Take(25))
 
         }
     }
-    else
+    else if (_fileProcessingConfig.MoveIfNotFound)
     {
         Console.WriteLine($"Could not find other {file} by that name. ");
         FileCounterModel.NotFoundFilesCount++;
@@ -109,7 +122,7 @@ File.WriteAllText(_fileProcessingConfig.ReportsFullFile, jsonString);
 
 // Summary
 Console.WriteLine("\n=== Processing Complete ===");
-Console.WriteLine($"Total files processed: {allSearchResults.Count}, found files {FileCounterModel.FoundFilesCount} and matched where {FileCounterModel.MatchedFilesCount}");
+Console.WriteLine($"Total files processed: {allSearchResults.Count}, found files {FileCounterModel.FoundFilesCount} and matched where {FileCounterModel.MatchedFilesCount} and not files linked {FileCounterModel.NotFoundFilesCount}");
 Console.WriteLine($"Results saved to: {_fileProcessingConfig.ReportsFullFile}");
 Console.WriteLine("\nPress any key to exit...");
 Console.ReadKey();
