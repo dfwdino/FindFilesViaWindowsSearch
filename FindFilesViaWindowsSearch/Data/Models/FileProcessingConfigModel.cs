@@ -70,7 +70,7 @@ namespace FindFilesViaWindowsSearch.Data.Models
             FoundFolder = foundFolder;
             NotFoundFolder = notFoundFolder;
             MatchedFolder = matchedFolder;
-            ReportsFullFile = reportsFullFile;
+            ReportsFullFile = reportsFullFile.Replace(".", $"_{DateTime.Now.ToString("MM-dd-yyyy_HH_mm")}.");
         }
 
         private void CheckFolderAndCreate(string folderlocation)

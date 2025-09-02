@@ -9,20 +9,20 @@ namespace FindFilesViaWindowsSearch.Infrastructure.Services
         {
             var results = new List<SearchResultModel>();
             var connectionString = "Provider=Search.CollatorDSO.1;Extended?Properties='Application=Windows';";
-            var driveLetter = "f:";
+            var driveLetter = @"F:\";
 
             var query = $@"
-           SELECT System.ItemName, System.ItemPathDisplay, System.Size, System.DateModified
-            FROM SystemIndex 
-            WHERE System.FileName like '{searchTerm}%' 
-            AND scope='file:'";
+               SELECT System.ItemName, System.ItemPathDisplay, System.Size, System.DateModified
+                FROM SystemIndex 
+                WHERE System.FileName like '{searchTerm}%' 
+                AND scope='file:'";
 
             if (fileType != "*")
             {
                 query += $" AND System.FileExtension = '.{fileType}'";
             }
 
-            query += $" AND System.ItemPathDisplay  LIKE '{driveLetter}%'";
+            //query += $" AND System.ItemPathDisplay LIKE '{driveLetter}%'"; //Why did this stop working....
 
             try
             {
@@ -34,13 +34,16 @@ namespace FindFilesViaWindowsSearch.Infrastructure.Services
 
                 while (await reader.ReadAsync())
                 {
-                    results.Add(new SearchResultModel
+                    if (reader["System.ItemPathDisplay"].ToString().StartsWith(driveLetter, StringComparison.OrdinalIgnoreCase)) //Not sure what happened but I had to add this logic in to fix the SQL not puling Drive letter only. 
                     {
-                        FileName = reader["System.ItemName"]?.ToString() ?? "",
-                        FullPath = reader["System.ItemPathDisplay"]?.ToString() ?? "",
-                        Size = Convert.ToInt64(reader["System.Size"] ?? 0),
-                        Modified = Convert.ToDateTime(reader["System.DateModified"])
-                    });
+                        results.Add(new SearchResultModel
+                        {
+                            FileName = reader["System.ItemName"]?.ToString() ?? "",
+                            FullPath = reader["System.ItemPathDisplay"]?.ToString() ?? "",
+                            Size = Convert.ToInt64(reader["System.Size"] ?? 0),
+                            Modified = Convert.ToDateTime(reader["System.DateModified"])
+                        });
+                    }
                 }
             }
             catch (Exception ex)

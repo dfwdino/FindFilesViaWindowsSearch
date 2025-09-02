@@ -49,12 +49,13 @@ List<AllSearchResults> allSearchResults = new();
 
 Console.WriteLine($"\nProcessing {FileCounterModel.TotalFilesCount} files...");
 
-foreach (string file in FileList.Take(50))
+foreach (string file in FileList.Take(1000))
 {
     FileCounterModel.ProcessedFilesCount++;
     Console.WriteLine($"\n[{FileCounterModel.ProcessedFilesCount}/{FileCounterModel.TotalFilesCount}] Processing file: {file}");
     Console.Write("Searching for matching files... ");
-    var WinodwsSearchResults = await _WindowsSearchService.SearchFilesAsync(file, "*");
+    var asdf = Path.GetFileNameWithoutExtension(file);
+    var WinodwsSearchResults = await _WindowsSearchService.SearchFilesAsync(Path.GetFileNameWithoutExtension(file), "*");
     Console.WriteLine($"Found {WinodwsSearchResults.Count} potential matches");
     long SourceSize = 0;
     long SourceSizeOnDisk = 0;
@@ -79,13 +80,14 @@ foreach (string file in FileList.Take(50))
                 continue;
             }
 
-            if (SourceSizeOnDisk == result.SizeOnDisk) //If Source and search Size On Disk bytes match.  Very likly its the same item. 
+            if (SourceSizeOnDisk == result.SizeOnDisk
+                            || SourceSize == result.Size) //If Source and search Size On Disk bytes match.  Very likly its the same item.  Over the testing Size, seems to be just as good but Size on Disk I am sure is a lot closer to 100%.  :-)
             {
                 result.IsSameSizeOnDisk = true;
                 string sourcePath = Path.Combine(_fileProcessingConfig.SearchFolder, file);
                 string destPath = Path.Combine(_fileProcessingConfig.SearchFolder, _fileProcessingConfig.MatchedFolder, file);
 
-                Console.WriteLine($"  ✓ Match found! Moving to matched folder...");
+                Console.WriteLine($" Match found! Moving to matched folder...");
                 try
                 {
                     Console.WriteLine($"Found matching name and Size on Disk the same.  Assuming its the same file name. ");
@@ -134,6 +136,9 @@ File.WriteAllText(_fileProcessingConfig.ReportsFullFile, jsonString);
 Console.WriteLine("\n=== Processing Complete ===");
 Console.WriteLine($"Total files processed: {allSearchResults.Count}, found files {FileCounterModel.FoundFilesCount} and matched where {FileCounterModel.MatchedFilesCount} and not files linked {FileCounterModel.NotFoundFilesCount}");
 Console.WriteLine($"Results saved to: {_fileProcessingConfig.ReportsFullFile}");
+
+#if !DEBUG 
 Console.WriteLine("\nPress any key to exit...");
 Console.ReadKey();
 
+#endif
